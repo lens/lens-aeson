@@ -55,15 +55,32 @@ import Prelude hiding(null)
 ------------------------------------------------------------------------------
 
 class AsNumber t where
+  -- |
+  -- >>> "[1, \"x\"]" ^? nth 0 . _Number
+  -- Just 1
+  --
+  -- >>> "[1, \"x\"]" ^? nth 1 . _Number
+  -- Nothing
   _Number :: Prism' t Number
   default _Number :: AsPrimitive t => Prism' t Number
   _Number = _Primitive._Number
 
-  -- | Prism into an 'Double' over a 'Value', 'Primitive' or 'Number'
+  -- |
+  -- Prism into an 'Double' over a 'Value', 'Primitive' or 'Number'
+  --
+  -- >>> "[10.2]" ^? nth 0 . _Double
+  -- Just 10.2
   _Double :: Prism' t Double
   _Double = _Number.prism D (\v -> case v of D d -> Right d; _ -> Left v)
 
-  -- | Prism into an 'Integer' over a 'Value', 'Primitive' or 'Number'
+  -- |
+  -- Prism into an 'Integer' over a 'Value', 'Primitive' or 'Number'
+  --
+  -- >>> "[10]" ^? nth 0 . _Integer
+  -- Just 10
+  --
+  -- >>> "[10.5]" ^? nth 0 . _Integer
+  -- Nothing
   _Integer :: Prism' t Integer
   _Integer = _Number.prism I (\v -> case v of I i -> Right i; _ -> Left v)
 
@@ -83,6 +100,12 @@ instance AsNumber String
 -- | Access Integer 'Value's as Integrals.
 --
 -- defined as `integer . 'Numeric.Lens.integral'`
+--
+-- >>> "[10]" ^? nth 0 . integralValue
+-- Just 10
+--
+-- >>> "[10.5]" ^? nth 0 . integralValue
+-- Nothing
 integralValue :: (AsNumber t, Integral a) => Prism' t a
 integralValue = _Integer . integral
 
@@ -102,16 +125,46 @@ instance AsNumber Primitive where
   _Number = prism NumberPrim $ \v -> case v of NumberPrim s -> Right s; _ -> Left v
 
 class AsNumber t => AsPrimitive t where
+  -- |
+  -- >>> "[1, \"x\", null, true, false]" ^? nth 0 . _Primitive
+  -- Just (NumberPrim 1)
+  --
+  -- >>> "[1, \"x\", null, true, false]" ^? nth 1 . _Primitive
+  -- Just (StringPrim "x")
+  --
+  -- >>> "[1, \"x\", null, true, false]" ^? nth 2 . _Primitive
+  -- Just NullPrim
+  --
+  -- >>> "[1, \"x\", null, true, false]" ^? nth 3 . _Primitive
+  -- Just (BoolPrim True)
+  --
+  -- >>> "[1, \"x\", null, true, false]" ^? nth 4 . _Primitive
+  -- Just (BoolPrim False)
   _Primitive :: Prism' t Primitive
   default _Primitive :: AsValue t => Prism' t Primitive
   _Primitive = _Value._Primitive
 
+  -- "{\"a\": \"xyz\", \"b\": true}" ^? key "a" . _String
+  -- Just "xyz"
+  --
+  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "b" . _String
+  -- Nothing
   _String :: Prism' t Text
   _String = _Primitive.prism StringPrim (\v -> case v of StringPrim s -> Right s; _ -> Left v)
 
+  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "b" . _Bool
+  -- Just True
+  --
+  -- "{\"a\": \"xyz\", \"b\": true}" ^? key "a" . _Bool
+  -- Nothing
   _Bool :: Prism' t Bool
   _Bool = _Primitive.prism BoolPrim (\v -> case v of BoolPrim b -> Right b; _ -> Left v)
 
+  -- >>> "{\"a\": \"xyz\", \"b\": null}" ^? key "b" . _Null
+  -- Just ()
+  --
+  -- >>> "{\"a\": \"xyz\", \"b\": null}" ^? key "a" . _Null
+  -- Nothing
   _Null :: Prism' t ()
   _Null = _Primitive.prism (const NullPrim) (\v -> case v of NullPrim -> Right (); _ -> Left v)
 
@@ -139,6 +192,15 @@ instance AsPrimitive Primitive where
   _Primitive = id
 
 -- | Prism into non-'Null' values
+--
+-- >>> "{\"a\": \"xyz\", \"b\": null}" ^? key "a" . nonNull
+-- Just (String "xyz")
+--
+-- >>> "{\"a\": {}, \"b\": null}" ^? key "a" . nonNull
+-- Just (Object fromList [])
+--
+-- >>> "{\"a\": \"xyz\", \"b\": null}" ^? key "b" . nonNull
+-- Nothing
 nonNull :: Prism' Value Value
 nonNull = prism id (\v -> if isn't _Null v then Right v else Left v)
 
@@ -148,13 +210,22 @@ nonNull = prism id (\v -> if isn't _Null v then Right v else Left v)
 
 class AsPrimitive t => AsValue t where
   -- |
-  -- >>> putStrLn $ "{\"a\": 1, \"b\": 3}" & key "a"._Integer *~ 100
-  -- {"a":100,"b":3}
+  -- >>>"[1,2,3]" ^? _Value
+  -- Just (Array (fromList [Number 1,Number 2,Number 3]))
   _Value :: Prism' t Value
 
+  -- |
+  -- >>> "{\"a\": {}, \"b\": null}" ^? key "a" . _Object
+  -- Just fromList []
+  --
+  -- >>> "{\"a\": {}, \"b\": null}" ^? key "b" . _Object
+  -- Nothing
   _Object :: Prism' t (HashMap Text Value)
   _Object = _Value.prism Object (\v -> case v of Object o -> Right o; _ -> Left v)
 
+  -- |
+  -- >>> "[1,2,3]" ^? _Array
+  -- Just (fromList [Number 1,Number 2,Number 3])
   _Array :: Prism' t (Vector Value)
   _Array = _Value.prism Array (\v -> case v of Array a -> Right a; _ -> Left v)
 
@@ -167,11 +238,28 @@ instance AsValue ByteString where
 instance AsValue String where
   _Value = iso UTF8.fromString UTF8.toString._Value
 
--- | Like 'ix', but for 'Object' with Text indices. This often has better inference than 'ix' when used with OverloadedStrings
+-- |
+-- Like 'ix', but for 'Object' with Text indices. This often has better
+-- inference than 'ix' when used with OverloadedStrings.
+--
+-- >>> "{\"a\": 100, \"b\": 200}" ^? key "a"
+-- Just (Number 100)
+--
+-- >>> "[1,2,3]" ^? key "a"
+-- Nothing
 key :: AsValue t => Text -> Traversal' t Value
 key i = _Object . ix i
 
 -- | Like 'ix', but for Arrays with Int indexes
+--
+-- >>> "[1,2,3]" ^? nth 1
+-- Just (Number 2)
+--
+-- >>> "\"a\": 100, \"b\": 200}" ^? nth 1
+-- Nothing
+--
+-- >>> "[1,2,3]" & nth 1 .~ (Number 20)
+-- "[1,20,3]"
 nth :: AsValue t => Int -> Traversal' t Value
 nth i = _Array . ix i
 
