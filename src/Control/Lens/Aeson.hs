@@ -22,7 +22,6 @@ module Control.Lens.Aeson
   (
   -- * Numbers
     AsNumber(..)
-  , integralValue
   , nonNull
   -- * Primitive
   , Primitive(..)
@@ -38,14 +37,13 @@ module Control.Lens.Aeson
 import Control.Applicative
 import Control.Lens
 import Data.Aeson
-import Data.Attoparsec.Number
 import Data.ByteString.Lazy.Char8 as Lazy hiding (putStrLn)
 import Data.ByteString.Lazy.UTF8 as UTF8 hiding (decode)
 import Data.Data
 import Data.HashMap.Strict (HashMap)
+import Data.Scientific
 import Data.Text
 import Data.Vector (Vector)
-import Numeric.Lens
 import Prelude hiding(null)
 
 -- $setup
@@ -59,59 +57,24 @@ import Prelude hiding(null)
 class AsNumber t where
   -- |
   -- >>> "[1, \"x\"]" ^? nth 0 . _Number
-  -- Just 1
+  -- Just 1.0
   --
   -- >>> "[1, \"x\"]" ^? nth 1 . _Number
   -- Nothing
-  _Number :: Prism' t Number
+  _Number :: Prism' t Scientific
 #ifndef HLINT
-  default _Number :: AsPrimitive t => Prism' t Number
+  default _Number :: AsPrimitive t => Prism' t Scientific
   _Number = _Primitive._Number
 #endif
-
-  -- |
-  -- Prism into an 'Double' over a 'Value', 'Primitive' or 'Number'
-  --
-  -- >>> "[10.2]" ^? nth 0 . _Double
-  -- Just 10.2
-  _Double :: Prism' t Double
-  _Double = _Number.prism D (\v -> case v of D d -> Right d; _ -> Left v)
-
-  -- |
-  -- Prism into an 'Integer' over a 'Value', 'Primitive' or 'Number'
-  --
-  -- >>> "[10]" ^? nth 0 . _Integer
-  -- Just 10
-  --
-  -- >>> "[10.5]" ^? nth 0 . _Integer
-  -- Nothing
-  _Integer :: Prism' t Integer
-  _Integer = _Number.prism I (\v -> case v of I i -> Right i; _ -> Left v)
 
 instance AsNumber Value where
   _Number = prism Number $ \v -> case v of Number n -> Right n; _ -> Left v
 
-instance AsNumber Number where
+instance AsNumber Scientific where
   _Number = id
 
 instance AsNumber ByteString
 instance AsNumber String
-
-------------------------------------------------------------------------------
--- Conversion Prisms
-------------------------------------------------------------------------------
-
--- | Access Integer 'Value's as Integrals.
---
--- defined as `integer . 'Numeric.Lens.integral'`
---
--- >>> "[10]" ^? nth 0 . integralValue
--- Just 10
---
--- >>> "[10.5]" ^? nth 0 . integralValue
--- Nothing
-integralValue :: (AsNumber t, Integral a) => Prism' t a
-integralValue = _Integer . integral
 
 ------------------------------------------------------------------------------
 -- Null values and primitives
@@ -120,7 +83,7 @@ integralValue = _Integer . integral
 -- | Primitives of 'Value'
 data Primitive
   = StringPrim !Text
-  | NumberPrim !Number
+  | NumberPrim !Scientific
   | BoolPrim !Bool
   | NullPrim
   deriving (Eq,Ord,Show,Data,Typeable)
@@ -131,7 +94,7 @@ instance AsNumber Primitive where
 class AsNumber t => AsPrimitive t where
   -- |
   -- >>> "[1, \"x\", null, true, false]" ^? nth 0 . _Primitive
-  -- Just (NumberPrim 1)
+  -- Just (NumberPrim 1.0)
   --
   -- >>> "[1, \"x\", null, true, false]" ^? nth 1 . _Primitive
   -- Just (StringPrim "x")
@@ -217,7 +180,7 @@ nonNull = prism id (\v -> if isn't _Null v then Right v else Left v)
 class AsPrimitive t => AsValue t where
   -- |
   -- >>>"[1,2,3]" ^? _Value
-  -- Just (Array (fromList [Number 1,Number 2,Number 3]))
+  -- Just (Array (fromList [Number 1.0,Number 2.0,Number 3.0]))
   _Value :: Prism' t Value
 
   -- |
@@ -231,7 +194,7 @@ class AsPrimitive t => AsValue t where
 
   -- |
   -- >>> "[1,2,3]" ^? _Array
-  -- Just (fromList [Number 1,Number 2,Number 3])
+  -- Just (fromList [Number 1.0,Number 2.0,Number 3.0])
   _Array :: Prism' t (Vector Value)
   _Array = _Value.prism Array (\v -> case v of Array a -> Right a; _ -> Left v)
 
@@ -249,7 +212,7 @@ instance AsValue String where
 -- inference than 'ix' when used with OverloadedStrings.
 --
 -- >>> "{\"a\": 100, \"b\": 200}" ^? key "a"
--- Just (Number 100)
+-- Just (Number 100.0)
 --
 -- >>> "[1,2,3]" ^? key "a"
 -- Nothing
@@ -262,7 +225,7 @@ members = _Object . each
 -- | Like 'ix', but for Arrays with Int indexes
 --
 -- >>> "[1,2,3]" ^? nth 1
--- Just (Number 2)
+-- Just (Number 2.0)
 --
 -- >>> "\"a\": 100, \"b\": 200}" ^? nth 1
 -- Nothing
