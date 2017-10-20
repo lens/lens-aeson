@@ -373,17 +373,18 @@ lazyTextUtf8 = iso LazyText.encodeUtf8 LazyText.decodeUtf8
 
 class AsJSON t where
   -- | '_JSON' is a 'Prism' from something containing JSON to something encoded in that structure
-  _JSON :: (FromJSON a, ToJSON a) => Prism' t a
+  _JSON :: (FromJSON a, ToJSON b) => Prism t t a b
 
 instance AsJSON Strict.ByteString where
   _JSON = lazy._JSON
   {-# INLINE _JSON #-}
 
 instance AsJSON Lazy.ByteString where
-  _JSON = prism' encode decodeValue
+  _JSON = prism encode decodeValue
     where
-      decodeValue :: (FromJSON a) => Lazy.ByteString -> Maybe a
-      decodeValue s = maybeResult (parse value s) >>= \x -> case fromJSON x of
+      decodeValue :: (FromJSON a) => Lazy.ByteString -> Either Lazy.ByteString a
+      decodeValue s = maybe (Left s) Right $
+        maybeResult (parse value s) >>= \x -> case fromJSON x of
         Success v -> Just v
         _         -> Nothing
   {-# INLINE _JSON #-}
