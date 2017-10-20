@@ -342,7 +342,7 @@ members = _Object . itraversed
 -- >>> "[1,2,3]" ^? nth 1
 -- Just (Number 2.0)
 --
--- >>> "\"a\": 100, \"b\": 200}" ^? nth 1
+-- >>> "{\"a\": 100, \"b\": 200}" ^? nth 1
 -- Nothing
 --
 -- >>> "[1,2,3]" & nth 1 .~ Number 20
