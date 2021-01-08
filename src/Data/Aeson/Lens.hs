@@ -74,6 +74,9 @@ import Data.Vector (Vector)
 import Prelude hiding (null)
 
 -- $setup
+-- >>> import Control.Lens
+-- >>> import Data.Aeson
+-- >>> import Data.Text (Text)
 -- >>> import Data.ByteString.Char8 as Strict.Char8
 -- >>> import qualified Data.Vector as Vector
 -- >>> :set -XOverloadedStrings
@@ -428,6 +431,8 @@ instance AsJSON Value where
 ------------------------------------------------------------------------------
 
 -- $LazyByteStringTests
+-- >>> import qualified Data.ByteString.Lazy.Char8 as Lazy
+--
 -- >>> "42" ^? (_JSON :: Prism' Lazy.ByteString Value)
 -- Just (Number 42.0)
 --
@@ -438,6 +443,8 @@ instance AsJSON Value where
 -- "42"
 
 -- $StrictByteStringTests
+-- >>> import qualified Data.ByteString.Char8 as Strict
+--
 -- >>> "42" ^? (_JSON :: Prism' Strict.ByteString Value)
 -- Just (Number 42.0)
 --

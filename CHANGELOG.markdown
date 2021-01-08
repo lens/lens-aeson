@@ -1,3 +1,10 @@
+next [yyyy.mm.dd]
+-----------------
+* The build-type has been changed from `Custom` to `Simple`.
+  To achieve this, the `doctests` test suite has been removed in favor of using
+  [`cabal-docspec`](https://github.com/phadej/cabal-extras/tree/master/cabal-docspec)
+  to run the doctests.
+
 1.1 [2019.09.26]
 ----------------
 * Generalize the type of `_JSON` from `Prism' t a` to `Prism t t a b`. If you
