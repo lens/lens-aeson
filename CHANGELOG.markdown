@@ -1,3 +1,9 @@
+next [????.??.??]
+-----------------
+* Allow building with `aeson-2.0.0.0`.
+* Add `Index`, `IxValue`, `Ixed`, `At`, and `Each` instances for `KeyMap` if
+  building with `aeson-2.0.0.0` or later.
+
 1.1.1 [2021.02.17]
 ------------------
 * Allow building with `lens-5.*`.
