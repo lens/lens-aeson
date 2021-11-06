@@ -7,11 +7,9 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-#if __GLASGOW_HASKELL__ >= 800
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
-#endif
+{-# OPTIONS_GHC -Wno-orphans #-}
 --------------------------------------------------------------------
 -- |
 -- Copyright :  (c) Edward Kmett 2013-2019, (c) Paul Wilson 2012
@@ -40,7 +38,6 @@ module Data.Aeson.Lens
   , AsJSON(..)
   , _JSON'
   -- * Pattern Synonyms
-#if __GLASGOW_HASKELL__ >= 800
   , pattern JSON
   , pattern Value_
   , pattern Number_
@@ -51,7 +48,6 @@ module Data.Aeson.Lens
   , pattern Bool_
   , pattern String_
   , pattern Null_
-#endif
   ) where
 
 import Control.Applicative
@@ -165,7 +161,7 @@ data Primitive
   | NumberPrim !Scientific
   | BoolPrim !Bool
   | NullPrim
-  deriving (Eq,Ord,Show,Data,Typeable)
+  deriving (Eq,Ord,Show,Data)
 
 instance AsNumber Primitive where
   _Number = prism NumberPrim $ \v -> case v of NumberPrim s -> Right s; _ -> Left v
@@ -521,7 +517,6 @@ instance Each (KM.KeyMap a) (KM.KeyMap b) a b where
 -- Pattern Synonyms
 ------------------------------------------------------------------------------
 
-#if __GLASGOW_HASKELL__ >= 800
 pattern JSON :: (FromJSON a, ToJSON a, AsJSON t) => () => a -> t
 pattern JSON a <- (preview _JSON -> Just a) where
   JSON a = _JSON # a
@@ -561,4 +556,3 @@ pattern String_ p <- (preview _String -> Just p) where
 pattern Null_ :: AsPrimitive t => t
 pattern Null_ <- (preview _Null -> Just ()) where
   Null_ = _Null # ()
-#endif
