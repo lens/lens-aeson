@@ -297,14 +297,12 @@ class AsPrimitive t => AsValue t where
   -- >>> _Object._Wrapped # [("key" :: Text, _String # "value")] :: String
   -- "{\"key\":\"value\"}"
   _Object :: Prism' t (HashMap Text Value)
-  _Object = _Value.prism (Object . fwd) (\v -> case v of Object o -> Right (bwd o); _ -> Left v)
+  _Object = _Value . _RawObject . hashMapText
     where
 #if MIN_VERSION_aeson(2,0,0)
-      fwd = KM.fromHashMapText
-      bwd = KM.toHashMapText
+      hashMapText = iso KM.toHashMapText KM.fromHashMapText
 #else
-      fwd = id
-      bwd = id
+      hashMapText = id
 #endif
   {-# INLINE _Object #-}
 
@@ -349,7 +347,7 @@ instance AsValue LazyText.Text where
 -- >>> "[1,2,3]" ^? key "a"
 -- Nothing
 key :: AsValue t => Text -> Traversal' t Value
-key i = _Object . ix i
+key i = _Value . ix i
 {-# INLINE key #-}
 
 -- | An indexed Traversal into Object properties
@@ -360,8 +358,28 @@ key i = _Object . ix i
 -- >>> "{\"a\": 4}" & members . _Number *~ 10
 -- "{\"a\":40}"
 members :: AsValue t => IndexedTraversal' Text t Value
-members = _Object . itraversed
+members = _Value . _RawObject . reindexed (view keyText) keyValues
+  where
+#if MIN_VERSION_aeson(2,0,0) && !MIN_VERSION_lens(5,0,0)
+    -- No access to TraversableWithIndex instance without incurring a new
+    -- dependency on indexed-traversable.  This can go away once lens >= 5 is
+    -- required.
+    keyValues = conjoined traverse $ KM.traverseWithKey . indexed
+#else
+    keyValues = itraversed
+#endif
 {-# INLINE members #-}
+
+_RawObject :: Prism' Value Object
+_RawObject = prism Object $ \v -> case v of Object o -> Right o; _ -> Left v
+{-# INLINE _RawObject #-}
+
+keyText :: Iso' (Index Object) Text
+#if MIN_VERSION_aeson(2,0,0)
+keyText = iso Key.toText Key.fromText
+#else
+keyText = id
+#endif
 
 -- | Like 'ix', but for Arrays with Int indexes
 --
@@ -481,15 +499,7 @@ type instance Index Value = Text
 
 type instance IxValue Value = Value
 instance Ixed Value where
-  ix i f (Object o) = Object <$> ix (toKey i) f o
-    where
-#if MIN_VERSION_aeson(2,0,0)
-      toKey :: Text -> Key.Key
-      toKey = Key.fromText
-#else
-      toKey = id
-#endif
-  ix _ _ v          = pure v
+  ix i = _RawObject . ix (keyText # i)
   {-# INLINE ix #-}
 
 instance Plated Value where

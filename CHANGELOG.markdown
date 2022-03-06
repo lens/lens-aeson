@@ -1,3 +1,10 @@
+1.1.4 [2022.03.05]
+------------------
+* Improve performance of `key`, `members`, and `ix @Value` when the underlying
+  representation of an object is an ordered map (the default in
+  `aeson-2.0.0.0`)&mdash;use the `KeyMap` as-is instead of unnecessarily
+  converting to a `HashMap` and back.
+
 1.1.3 [2021.11.16]
 ------------------
 * Drop support for pre-8.0 versions of GHC.
