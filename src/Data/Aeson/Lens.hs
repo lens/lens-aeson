@@ -347,7 +347,7 @@ instance AsValue LazyText.Text where
 -- >>> "[1,2,3]" ^? key "a"
 -- Nothing
 key :: AsValue t => Text -> Traversal' t Value
-key i = _Value . ix i
+key i = _Value . _RawObject . ix (keyText # i)
 {-# INLINE key #-}
 
 -- | An indexed Traversal into Object properties
@@ -499,7 +499,7 @@ type instance Index Value = Text
 
 type instance IxValue Value = Value
 instance Ixed Value where
-  ix i = _RawObject . ix (keyText # i)
+  ix = key
   {-# INLINE ix #-}
 
 instance Plated Value where
