@@ -465,11 +465,11 @@ instance AsJSON Value where
 -- Orphan instances for lens library interop
 ------------------------------------------------------------------------------
 
-type instance Index Value = Text
+type instance Index Value = Key
 
 type instance IxValue Value = Value
 instance Ixed Value where
-  ix i f (Object o) = Object <$> ix (Key.fromText i) f o
+  ix i f (Object o) = Object <$> ix i f o
   ix _ _ v          = pure v
   {-# INLINE ix #-}
 

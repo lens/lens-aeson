@@ -16,6 +16,13 @@
 
   This mirrors similar changes made in `aeson-2.0.*`, where the type of
   `Object`'s field was changed from `HashMap Text Value` to `KeyMap Value`.
+
+  The `Ixed Value` instance changes similarly:
+
+  ```diff
+  -type instance Index Value = Text
+  +type instance Index Value = Key
+  ```
 * Add `Wrapped` and `Rewrapped` instances for `KeyMap`. These treat `KeyMap v`
   as a wrapper around `[(Key, v)]`. The order in which the key-value pairs
   appear in this list is not stable.
