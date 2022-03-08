@@ -1,6 +1,6 @@
 1.2 [????.??.??]
 ----------------
-* Require `aeson-2.0.*` and `lens-5.0.*` or greater.
+* Require `aeson-2.0.2.*` and `lens-5.0.*` or greater.
 * Change the types of `_Object`, `key`, and `members`:
 
   ```diff
@@ -26,6 +26,8 @@
 * Add `Wrapped` and `Rewrapped` instances for `KeyMap`. These treat `KeyMap v`
   as a wrapper around `[(Key, v)]`. The order in which the key-value pairs
   appear in this list is not stable.
+* Add an `IsKey` class, whose method `_Key` is an `Iso` for converting values
+  to and from a `Key`.
 
 1.1.3 [2021.11.16]
 ------------------

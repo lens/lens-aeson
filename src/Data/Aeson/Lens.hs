@@ -33,6 +33,7 @@ module Data.Aeson.Lens
   , AsValue(..)
   , key, members
   , nth, values
+  , IsKey(..)
   -- * Decoding
   , AsJSON(..)
   , _JSON'
@@ -47,6 +48,7 @@ module Data.Aeson.Lens
   , pattern Bool_
   , pattern String_
   , pattern Null_
+  , pattern Key_
   ) where
 
 import Control.Applicative
@@ -64,6 +66,7 @@ import Data.ByteString.Lazy.Char8 as Lazy hiding (putStrLn)
 import Data.Data
 import Data.Text as Text
 import qualified Data.Text.Lazy as LazyText
+import Data.Text.Short (ShortText)
 import Data.Text.Lens (packed)
 import qualified Data.Text.Encoding as StrictText
 import qualified Data.Text.Lazy.Encoding as LazyText
@@ -388,6 +391,49 @@ lazyTextUtf8 = iso LazyText.encodeUtf8 LazyText.decodeUtf8
 _JSON' :: (AsJSON t, FromJSON a, ToJSON a) => Prism' t a
 _JSON' = _JSON
 
+
+class IsKey t where
+  -- | '_Key' is an 'Iso' from something to a 'Key'. This is primarily intended
+  -- for situations where one wishes to use object keys that are not string
+  -- literals and therefore must be converted:
+  --
+  -- >>> let k = "a" :: Text
+  -- >>> "{\"a\": 100, \"b\": 200}" ^? key (k ^. _Key)
+  -- Just (Number 100.0)
+  --
+  -- Note that applying '_Key' directly to a string literal
+  -- (e.g., @\"a\" ^. '_Key'@) will likely not typecheck when
+  -- @OverloadedStrings@ is enabled.
+  _Key :: Iso' t Key
+
+instance IsKey Key where
+  _Key = id
+  {-# INLINE _Key #-}
+
+instance IsKey String where
+  _Key = iso Key.fromString Key.toString
+  {-# INLINE _Key #-}
+
+instance IsKey Text.Text where
+  _Key = iso Key.fromText Key.toText
+  {-# INLINE _Key #-}
+
+instance IsKey LazyText.Text where
+  _Key = strict._Key
+  {-# INLINE _Key #-}
+
+instance IsKey ShortText where
+  _Key = iso Key.fromShortText Key.toShortText
+  {-# INLINE _Key #-}
+
+instance IsKey Strict.ByteString where
+  _Key = from strictTextUtf8._Key
+  {-# INLINE _Key #-}
+
+instance IsKey Lazy.ByteString where
+  _Key = from lazyTextUtf8._Key
+  {-# INLINE _Key #-}
+
 class AsJSON t where
   -- | '_JSON' is a 'Prism' from something containing JSON to something encoded in that structure
   _JSON :: (FromJSON a, ToJSON b) => Prism t t a b
@@ -543,3 +589,7 @@ pattern String_ p <- (preview _String -> Just p) where
 pattern Null_ :: AsPrimitive t => t
 pattern Null_ <- (preview _Null -> Just ()) where
   Null_ = _Null # ()
+
+pattern Key_ :: IsKey t => Key -> t
+pattern Key_ k <- (preview _Key -> Just k) where
+  Key_ k = _Key # k
