@@ -26,6 +26,8 @@ module Data.Aeson.Lens
     AsNumber(..)
   , _Integral
   , nonNull
+  , nullIsNothing
+  , nullIsDefault
   -- * Primitive
   , Primitive(..)
   , AsPrimitive(..)
@@ -272,6 +274,51 @@ instance AsPrimitive Primitive where
 nonNull :: Prism' Value Value
 nonNull = prism id (\v -> if isn't _Null v then Right v else Left v)
 {-# INLINE nonNull #-}
+
+
+-- | Treat a 'Null' value as equivalent to @Nothing@.
+--
+-- >>> Number 123 ^? nullIsNothing _Integer
+-- Just (Just 123)
+-- 
+-- >>> Null ^? nullIsNothing _Integer
+-- Just Nothing
+--
+-- >>> "xyz" ^? nullIsNothing _Integer
+-- Nothing
+--
+-- >>> Nothing ^. re (nullIsNothing _Integer)
+-- Null
+--
+-- >>> Just 123 ^. re (nullIsNothing _Integer)
+-- Number 123.0 
+nullIsNothing :: APrism' Value a -> Prism' Value (Maybe a)
+nullIsNothing p = withPrism p $ \bk fw ->
+   let
+      bk1 Nothing = Null
+      bk1 (Just x) = bk x
+      fw1 Null = Right Nothing
+      fw1 x = Just <$> fw x
+   in prism bk1 fw1
+
+
+-- | Treat a 'Null' value as a default
+--
+-- >>> Number 123 ^? nullIsDefault 0 _Integer
+-- Just 123
+--
+-- >>> Null ^? nullIsDefault 0 _Integer
+-- Just 0
+--
+-- >>> "xyz" ^? nullIsDefault 0 _Integer
+-- Nothing
+nullIsDefault :: q -> Prism' Value q -> Prism' Value q
+nullIsDefault q p = withPrism p $ \bk fw ->
+    let
+        fw1 Null = Right q
+        fw1 x = fw x
+    in prism bk fw1
+
 
 ------------------------------------------------------------------------------
 -- Non-primitive traversals
