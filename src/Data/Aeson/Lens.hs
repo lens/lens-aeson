@@ -26,9 +26,6 @@ module Data.Aeson.Lens
     AsNumber(..)
   , _Integral
   , nonNull
-  -- * Primitive
-  , Primitive(..)
-  , AsPrimitive(..)
   -- * Objects and Arrays
   , AsValue(..)
   , key, members
@@ -43,7 +40,6 @@ module Data.Aeson.Lens
   , pattern Double
   , pattern Integer
   , pattern Integral
-  , pattern Primitive
   , pattern Bool_
   , pattern String_
   , pattern Null_
@@ -61,7 +57,6 @@ import Data.Scientific (Scientific)
 import qualified Data.Scientific as Scientific
 import qualified Data.ByteString as Strict
 import Data.ByteString.Lazy.Char8 as Lazy hiding (putStrLn)
-import Data.Data
 import Data.Text as Text
 import qualified Data.Text.Lazy as LazyText
 import Data.Text.Lens (packed)
@@ -90,12 +85,12 @@ class AsNumber t where
   -- >>> "[1, \"x\"]" ^? nth 1 . _Number
   -- Nothing
   _Number :: Prism' t Scientific
-  default _Number :: AsPrimitive t => Prism' t Scientific
-  _Number = _Primitive._Number
+  default _Number :: AsValue t => Prism' t Scientific
+  _Number = _Value._Number
   {-# INLINE _Number #-}
 
   -- |
-  -- Prism into an 'Double' over a 'Value', 'Primitive' or 'Scientific'
+  -- Prism into an 'Double' over a 'Value' or 'Scientific'
   --
   -- >>> "[10.2]" ^? nth 0 . _Double
   -- Just 10.2
@@ -104,7 +99,7 @@ class AsNumber t where
   {-# INLINE _Double #-}
 
   -- |
-  -- Prism into an 'Integer' over a 'Value', 'Primitive' or 'Scientific'
+  -- Prism into an 'Integer' over a 'Value' or 'Scientific'
   --
   -- >>> "[10]" ^? nth 0 . _Integer
   -- Just 10
@@ -148,116 +143,8 @@ _Integral = _Number . iso floor fromIntegral
 {-# INLINE _Integral #-}
 
 ------------------------------------------------------------------------------
--- Null values and primitives
+-- Null values
 ------------------------------------------------------------------------------
-
--- | Primitives of 'Value'
-data Primitive
-  = StringPrim !Text
-  | NumberPrim !Scientific
-  | BoolPrim !Bool
-  | NullPrim
-  deriving (Eq,Ord,Show,Data)
-
-instance AsNumber Primitive where
-  _Number = prism NumberPrim $ \v -> case v of NumberPrim s -> Right s; _ -> Left v
-  {-# INLINE _Number #-}
-
-class AsNumber t => AsPrimitive t where
-  -- |
-  -- >>> "[1, \"x\", null, true, false]" ^? nth 0 . _Primitive
-  -- Just (NumberPrim 1.0)
-  --
-  -- >>> "[1, \"x\", null, true, false]" ^? nth 1 . _Primitive
-  -- Just (StringPrim "x")
-  --
-  -- >>> "[1, \"x\", null, true, false]" ^? nth 2 . _Primitive
-  -- Just NullPrim
-  --
-  -- >>> "[1, \"x\", null, true, false]" ^? nth 3 . _Primitive
-  -- Just (BoolPrim True)
-  --
-  -- >>> "[1, \"x\", null, true, false]" ^? nth 4 . _Primitive
-  -- Just (BoolPrim False)
-  _Primitive :: Prism' t Primitive
-  default _Primitive :: AsValue t => Prism' t Primitive
-  _Primitive = _Value._Primitive
-  {-# INLINE _Primitive #-}
-
-  -- |
-  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "a" . _String
-  -- Just "xyz"
-  --
-  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "b" . _String
-  -- Nothing
-  --
-  -- >>> _Object._Wrapped # [("key" :: Key, _String # "value")] :: String
-  -- "{\"key\":\"value\"}"
-  _String :: Prism' t Text
-  _String = _Primitive.prism StringPrim (\v -> case v of StringPrim s -> Right s; _ -> Left v)
-  {-# INLINE _String #-}
-
-  -- |
-  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "b" . _Bool
-  -- Just True
-  --
-  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "a" . _Bool
-  -- Nothing
-  --
-  -- >>> _Bool # True :: String
-  -- "true"
-  --
-  -- >>> _Bool # False :: String
-  -- "false"
-  _Bool :: Prism' t Bool
-  _Bool = _Primitive.prism BoolPrim (\v -> case v of BoolPrim b -> Right b; _ -> Left v)
-  {-# INLINE _Bool #-}
-
-  -- |
-  -- >>> "{\"a\": \"xyz\", \"b\": null}" ^? key "b" . _Null
-  -- Just ()
-  --
-  -- >>> "{\"a\": \"xyz\", \"b\": null}" ^? key "a" . _Null
-  -- Nothing
-  --
-  -- >>> _Null # () :: String
-  -- "null"
-  _Null :: Prism' t ()
-  _Null = _Primitive.prism (const NullPrim) (\v -> case v of NullPrim -> Right (); _ -> Left v)
-  {-# INLINE _Null #-}
-
-
-instance AsPrimitive Value where
-  _Primitive = prism fromPrim toPrim
-    where
-      toPrim (String s) = Right $ StringPrim s
-      toPrim (Number n) = Right $ NumberPrim n
-      toPrim (Bool b)   = Right $ BoolPrim b
-      toPrim Null       = Right NullPrim
-      toPrim v          = Left v
-      {-# INLINE toPrim #-}
-      fromPrim (StringPrim s) = String s
-      fromPrim (NumberPrim n) = Number n
-      fromPrim (BoolPrim b)   = Bool b
-      fromPrim NullPrim       = Null
-      {-# INLINE fromPrim #-}
-  {-# INLINE _Primitive #-}
-  _String = prism String $ \v -> case v of String s -> Right s; _ -> Left v
-  {-# INLINE _String #-}
-  _Bool = prism Bool (\v -> case v of Bool b -> Right b; _ -> Left v)
-  {-# INLINE _Bool #-}
-  _Null = prism (const Null) (\v -> case v of Null -> Right (); _ -> Left v)
-  {-# INLINE _Null #-}
-
-instance AsPrimitive Strict.ByteString
-instance AsPrimitive Lazy.ByteString
-instance AsPrimitive Text.Text
-instance AsPrimitive LazyText.Text
-instance AsPrimitive String
-
-instance AsPrimitive Primitive where
-  _Primitive = id
-  {-# INLINE _Primitive #-}
 
 -- | Prism into non-'Null' values
 --
@@ -274,14 +161,56 @@ nonNull = prism id (\v -> if isn't _Null v then Right v else Left v)
 {-# INLINE nonNull #-}
 
 ------------------------------------------------------------------------------
--- Non-primitive traversals
+-- Non-number traversals
 ------------------------------------------------------------------------------
 
-class AsPrimitive t => AsValue t where
+class AsValue t where
   -- |
   -- >>> preview _Value "[1,2,3]" == Just (Array (Vector.fromList [Number 1.0,Number 2.0,Number 3.0]))
   -- True
   _Value :: Prism' t Value
+
+  -- |
+  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "a" . _String
+  -- Just "xyz"
+  --
+  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "b" . _String
+  -- Nothing
+  --
+  -- >>> _Object._Wrapped # [("key" :: Key, _String # "value")] :: String
+  -- "{\"key\":\"value\"}"
+  _String :: Prism' t Text
+  _String = _Value.prism String (\v -> case v of String s -> Right s; _ -> Left v)
+  {-# INLINE _String #-}
+
+  -- |
+  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "b" . _Bool
+  -- Just True
+  --
+  -- >>> "{\"a\": \"xyz\", \"b\": true}" ^? key "a" . _Bool
+  -- Nothing
+  --
+  -- >>> _Bool # True :: String
+  -- "true"
+  --
+  -- >>> _Bool # False :: String
+  -- "false"
+  _Bool :: Prism' t Bool
+  _Bool = _Value.prism Bool (\v -> case v of Bool b -> Right b; _ -> Left v)
+  {-# INLINE _Bool #-}
+
+  -- |
+  -- >>> "{\"a\": \"xyz\", \"b\": null}" ^? key "b" . _Null
+  -- Just ()
+  --
+  -- >>> "{\"a\": \"xyz\", \"b\": null}" ^? key "a" . _Null
+  -- Nothing
+  --
+  -- >>> _Null # () :: String
+  -- "null"
+  _Null :: Prism' t ()
+  _Null = _Value.prism (const Null) (\v -> case v of Null -> Right (); _ -> Left v)
+  {-# INLINE _Null #-}
 
   -- |
   -- >>> "{\"a\": {}, \"b\": null}" ^? key "a" . _Object
@@ -528,18 +457,14 @@ pattern Integral :: (AsNumber t, Integral a) => a -> t
 pattern Integral d <- (preview _Integral -> Just d) where
   Integral d = _Integral # d
 
-pattern Primitive :: AsPrimitive t => Primitive -> t
-pattern Primitive p <- (preview _Primitive -> Just p) where
-  Primitive p = _Primitive # p
-
-pattern Bool_ :: AsPrimitive t => Bool -> t
+pattern Bool_ :: AsValue t => Bool -> t
 pattern Bool_ b <- (preview _Bool -> Just b) where
   Bool_ b = _Bool # b
 
-pattern String_ :: AsPrimitive t => Text -> t
+pattern String_ :: AsValue t => Text -> t
 pattern String_ p <- (preview _String -> Just p) where
   String_ p = _String # p
 
-pattern Null_ :: AsPrimitive t => t
+pattern Null_ :: AsValue t => t
 pattern Null_ <- (preview _Null -> Just ()) where
   Null_ = _Null # ()
