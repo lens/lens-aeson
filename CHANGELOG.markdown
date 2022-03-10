@@ -25,8 +25,10 @@
   ```
 * Remove `Primitive` and `AsPrimitive`, since https://tools.ietf.org/html/rfc7159
   de-emphasized the notion of primitive versus composite JSON values.
-  * `_Number`'s default signature, `_Bool`, `Bool_`, `_String`, `String_`,
-    `_Null`, and `Null_` now have an `AsValue` constraint.
+  * The `AsPrimitive` methods (`_Value`, `_String`, and `_Bool`) are now
+    `AsValue` methods.
+  * `_Number`'s default signature, `Bool_`, `String_`, and `Null_` now have an
+    `AsValue` constraint.
 * Add `Wrapped` and `Rewrapped` instances for `KeyMap`. These treat `KeyMap v`
   as a wrapper around `[(Key, v)]`. The order in which the key-value pairs
   appear in this list is not stable.

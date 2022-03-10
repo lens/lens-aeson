@@ -163,7 +163,7 @@ nonNull = prism id (\v -> if isn't _Null v then Right v else Left v)
 -- Non-number traversals
 ------------------------------------------------------------------------------
 
-class AsValue t where
+class AsNumber t => AsValue t where
   -- |
   -- >>> preview _Value "[1,2,3]" == Just (Array (Vector.fromList [Number 1.0,Number 2.0,Number 3.0]))
   -- True
