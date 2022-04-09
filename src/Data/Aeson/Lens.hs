@@ -60,6 +60,7 @@ import qualified Data.Scientific as Scientific
 import qualified Data.ByteString as Strict
 import Data.ByteString.Lazy.Char8 as Lazy hiding (putStrLn)
 import Data.Text as Text
+import qualified Data.Text.Encoding.Error as Encoding
 import qualified Data.Text.Lazy as LazyText
 import Data.Text.Short (ShortText)
 import Data.Text.Lens (packed)
@@ -72,7 +73,9 @@ import Prelude hiding (null)
 -- >>> import Control.Lens
 -- >>> import Data.Aeson
 -- >>> import Data.Text (Text)
+-- >>> import qualified Data.ByteString as Strict (ByteString)
 -- >>> import Data.ByteString.Char8 as Strict.Char8
+-- >>> import qualified Data.ByteString.Lazy as Lazy (ByteString)
 -- >>> import qualified Data.Vector as Vector
 -- >>> :set -XOverloadedStrings
 
@@ -312,10 +315,10 @@ strictUtf8 :: Iso' String Strict.ByteString
 strictUtf8 = packed . strictTextUtf8
 
 strictTextUtf8 :: Iso' Text.Text Strict.ByteString
-strictTextUtf8 = iso StrictText.encodeUtf8 StrictText.decodeUtf8
+strictTextUtf8 = iso StrictText.encodeUtf8 (StrictText.decodeUtf8With Encoding.lenientDecode)
 
 lazyTextUtf8 :: Iso' LazyText.Text Lazy.ByteString
-lazyTextUtf8 = iso LazyText.encodeUtf8 LazyText.decodeUtf8
+lazyTextUtf8 = iso LazyText.encodeUtf8 (LazyText.decodeUtf8With Encoding.lenientDecode)
 
 _JSON' :: (AsJSON t, FromJSON a, ToJSON a) => Prism' t a
 _JSON' = _JSON
@@ -355,10 +358,30 @@ instance IsKey ShortText where
   _Key = iso Key.fromShortText Key.toShortText
   {-# INLINE _Key #-}
 
+-- | This instance assumes that you are dealing with UTF-8–encoded
+-- 'Strict.ByteString's, as this is the encoding that RFC 8259 requires JSON
+-- values to use. As such, this is not a full 'Iso', since non–UTF-8–encoded
+-- 'Strict.ByteString's will not roundtrip:
+--
+-- >>> let str = view _Key ("\255" :: Strict.ByteString)
+-- >>> str
+-- "\65533"
+-- >>> view (from _Key) str :: Strict.ByteString
+-- "\239\191\189"
 instance IsKey Strict.ByteString where
   _Key = from strictTextUtf8._Key
   {-# INLINE _Key #-}
 
+-- | This instance assumes that you are dealing with UTF-8–encoded
+-- 'Lazy.ByteString's, as this is the encoding that RFC 8259 requires JSON
+-- values to use. As such, this is not a full 'Iso', since non–UTF-8–encoded
+-- 'Lazy.ByteString's will not roundtrip:
+--
+-- >>> let str = view _Key ("\255" :: Lazy.ByteString)
+-- >>> str
+-- "\65533"
+-- >>> view (from _Key) str :: Lazy.ByteString
+-- "\239\191\189"
 instance IsKey Lazy.ByteString where
   _Key = from lazyTextUtf8._Key
   {-# INLINE _Key #-}

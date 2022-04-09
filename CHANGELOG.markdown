@@ -1,3 +1,11 @@
+next [????.??.??]
+-----------------
+* Change the `IsKey` instances for `ByteString`s to use
+  `decodeUtf8With lenientDecode` instead of `decodeUtf8`. While these `IsKey`
+  instances are meant to used for interoperability with `aeson` values that
+  are UTF-8–encoded, using `decodeUtf8With lenientDecode` at least ensures
+  that converting a non–UTF-8–encoded `ByteString` will not crash.
+
 1.2 [2022.03.19]
 ----------------
 * Require `aeson-2.0.2.*` and `lens-5.0.*` or greater.
