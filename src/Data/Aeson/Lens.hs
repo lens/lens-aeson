@@ -28,7 +28,7 @@ module Data.Aeson.Lens
   , nonNull
   -- * Objects and Arrays
   , AsValue(..)
-  , key, members
+  , key, atKey, members
   , nth, values
   , IsKey(..)
   -- * Decoding
@@ -274,6 +274,19 @@ instance AsValue LazyText.Text where
 key :: AsValue t => Key -> Traversal' t Value
 key i = _Object . ix i
 {-# INLINE key #-}
+
+-- |
+-- Like 'key', but uses 'at' instead of 'ix'. This is handy when
+-- adding and removing object keys:
+--
+-- >>> "{\"a\": 100, \"b\": 200}" & atKey "a" .~ Nothing
+-- "{\"b\":200}"
+--
+-- >>> "{\"a\": 100, \"b\": 200}" & atKey "c" ?~ String "300"
+-- "{\"a\":100,\"b\":200,\"c\":\"300\"}"
+atKey :: AsValue t => Key -> Traversal' t (Maybe Value)
+atKey i = _Object . at i
+{-# INLINE atKey #-}
 
 -- | An indexed Traversal into Object properties
 --
