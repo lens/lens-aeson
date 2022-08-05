@@ -1,3 +1,8 @@
+Unreleased
+----------
+
+* Add `atKey :: AsValue t => Key -> Traversal' t (Maybe Value)`
+
 1.2.1 [2022.05.07]
 ------------------
 * Change the `IsKey` instances for `ByteString`s to use
@@ -105,4 +110,3 @@
 0.1
 ---
 * Repository initialized
-
