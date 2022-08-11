@@ -1,7 +1,7 @@
-Unreleased
-----------
-
-* Add `atKey :: AsValue t => Key -> Traversal' t (Maybe Value)`
+1.2.2 [2022.08.11]
+------------------
+* Add `atKey :: AsValue t => Key -> Traversal' t (Maybe Value)`, a variant of
+  `key` that uses `at` instead of `ix`.
 
 1.2.1 [2022.05.07]
 ------------------
