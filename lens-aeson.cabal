@@ -44,7 +44,6 @@ library
     text-short           >= 0.1.4     && < 0.2,
     vector               >= 0.9       && < 0.14,
     unordered-containers >= 0.2.3     && < 0.3,
-    attoparsec           >= 0.10      && < 0.15,
     bytestring           >= 0.9       && < 0.12,
     aeson                >= 2.0.2     && < 2.2,
     scientific           >= 0.3.2     && < 0.4
