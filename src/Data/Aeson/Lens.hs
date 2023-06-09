@@ -53,8 +53,6 @@ import Data.Aeson
 import qualified Data.Aeson.Key    as Key
 import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.KeyMap (KeyMap)
-import Data.Aeson.Parser (value)
-import Data.Attoparsec.ByteString.Lazy (maybeResult, parse)
 import Data.Scientific (Scientific)
 import qualified Data.Scientific as Scientific
 import qualified Data.ByteString as Strict
@@ -408,12 +406,7 @@ instance AsJSON Strict.ByteString where
   {-# INLINE _JSON #-}
 
 instance AsJSON Lazy.ByteString where
-  _JSON = prism' encode decodeValue
-    where
-      decodeValue :: (FromJSON a) => Lazy.ByteString -> Maybe a
-      decodeValue s = maybeResult (parse value s) >>= \x -> case fromJSON x of
-        Success v -> Just v
-        _         -> Nothing
+  _JSON = prism' encode decode
   {-# INLINE _JSON #-}
 
 instance AsJSON String where
