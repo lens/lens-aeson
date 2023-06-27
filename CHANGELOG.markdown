@@ -2,6 +2,7 @@ next [????.??.??]
 -----------------
 * Use `aeson`'s `decode` function in the `AsJSON` instance for `ByteString`s.
   This allows removing a direct dependency on `attoparsec`.
+* Allow building with `aeson-2.2`.
 
 1.2.2 [2022.08.11]
 ------------------
